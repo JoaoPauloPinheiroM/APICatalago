@@ -1,0 +1,7 @@
+@APICatalago_HostAddress = https://localhost:7221
+
+
+
+GET {{APICatalago_HostAddress}}/weatherforecast
+
+###

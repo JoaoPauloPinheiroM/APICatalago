@@ -2,6 +2,7 @@
 using APICatalago.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace APICatalago.Controllers;
 
@@ -27,7 +28,7 @@ public class ProdutosController : ControllerBase
         return produtos;
     }
 
-    [HttpGet("{id:int}")]
+    [HttpGet("{id:int}", Name = "ObterProduto")]
     public ActionResult<Produto> Get(int id)
     {
         var produto = _context.Produtos.FirstOrDefault(p => p.ProdutoId == id);
@@ -41,5 +42,48 @@ public class ProdutosController : ControllerBase
     [HttpPost]
     public ActionResult Post(Produto produto)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+        if (produto is null)
+        {
+            return BadRequest("Produto inválido!");
+        }
+        _context.Produtos.Add(produto);
+        _context.SaveChanges();
+
+        return new CreatedAtRouteResult("ObterProduto",
+            new { id = produto.ProdutoId }, produto);
+    }
+
+    [HttpPut("{id:int}")]
+    public ActionResult Put(int id, Produto produto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+        if (id != produto.ProdutoId)
+        {
+            return BadRequest("Produto inválido!");
+        }
+        _context.Entry(produto).State = EntityState.Modified;
+        _context.SaveChanges();
+
+        return Ok(produto);
+    }
+
+    [HttpDelete("{id:int}")]
+    public ActionResult Delete(int id)
+    {
+        var produto = _context.Produtos.FirstOrDefault(p => p.ProdutoId == id);
+        if (produto is null)
+        {
+            return NotFound("Produto não encontrado!");
+        }
+        _context.Produtos.Remove(produto);
+        _context.SaveChanges();
+        return Ok($"{produto.Nome} removido com sucesso!");
     }
 }

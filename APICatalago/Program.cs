@@ -32,6 +32,6 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
-app.MapControllers();
+app.MapControllers(); // usado para mapear os controllers com atributo [ApiController] e [Route]
 
 app.Run();

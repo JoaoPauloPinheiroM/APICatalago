@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace APICatalago.Controllers;
 
-[Route("[controller]")]
+[Route("api/[controller]")]
 [ApiController]
 public class ProdutosController : ControllerBase
 {
@@ -17,73 +17,124 @@ public class ProdutosController : ControllerBase
         _context = context;
     }
 
+    // Rota async para obter todos os produtos
     [HttpGet]
-    public ActionResult<IEnumerable<Produto>> Get()
+    public async Task<ActionResult<IEnumerable<Produto>>> Get()
     {
-        var produtos = _context.Produtos.AsNoTracking().ToList();
-        if (produtos is null)
+        try
         {
-            return NotFound("Produtos não encontrados!");
+            var produtos = await _context.Produtos.AsNoTracking().ToListAsync();
+            if (produtos is null || !produtos.Any())
+            {
+                return NotFound("Produtos não encontrados!");
+            }
+            return produtos;
         }
-        return produtos;
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Erro ao buscar produtos: {ex.Message}");
+        }
     }
 
-    [HttpGet("{id:int}", Name = "ObterProduto")]
-    public ActionResult<Produto> Get(int id)
+    // Rota async para obter produtos por categoria
+    [HttpGet("{id:int:min(1)}", Name = "ObterProduto")]
+    public async Task<ActionResult<Produto>> GetAsync(int id)
     {
-        var produto = _context.Produtos.AsNoTracking().FirstOrDefault(p => p.ProdutoId == id);
-        if (produto is null)
+        try
         {
-            return NotFound("Produto não encontrado!");
+            var produto = await _context.Produtos.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.ProdutoId == id);
+            if (produto is null)
+            {
+                return NotFound("Produto não encontrado!");
+            }
+            return produto;
         }
-        return produto;
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Erro ao buscar o produto: {ex.Message}");
+        }
     }
 
+    // Rota para adicionar um novo produto
     [HttpPost]
     public ActionResult Post(Produto produto)
     {
-        if (!ModelState.IsValid)
+        try
         {
-            return BadRequest(ModelState);
-        }
-        if (produto is null)
-        {
-            return BadRequest("Produto inválido!");
-        }
-        _context.Produtos.Add(produto);
-        _context.SaveChanges();
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (produto is null)
+            {
+                return BadRequest("Produto inválido!");
+            }
 
-        return new CreatedAtRouteResult("ObterProduto",
-            new { id = produto.ProdutoId }, produto);
+            _context.Produtos.Add(produto);
+            _context.SaveChanges();
+
+            return new CreatedAtRouteResult("ObterProduto",
+                new { id = produto.ProdutoId }, produto);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Erro ao adicionar produto: {ex.Message}");
+        }
     }
 
-    [HttpPut("{id:int}")]
+    // Rota para atualizar um produto existente
+    [HttpPut("{id:int:min(1)}")]
     public ActionResult Put(int id, Produto produto)
     {
-        if (!ModelState.IsValid)
+        try
         {
-            return BadRequest(ModelState);
-        }
-        if (id != produto.ProdutoId)
-        {
-            return BadRequest("Produto inválido!");
-        }
-        _context.Entry(produto).State = EntityState.Modified;
-        _context.SaveChanges();
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (id != produto.ProdutoId)
+            {
+                return BadRequest("Produto inválido!");
+            }
 
-        return Ok(produto);
+            var produtoExistente = _context.Produtos.AsNoTracking().FirstOrDefault(p => p.ProdutoId == id);
+            if (produtoExistente is null)
+            {
+                return NotFound("Produto não encontrado para atualização!");
+            }
+
+            _context.Entry(produto).State = EntityState.Modified;
+            _context.SaveChanges();
+
+            return Ok(produto);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Erro ao atualizar produto: {ex.Message}");
+        }
     }
 
-    [HttpDelete("{id:int}")]
+    // Rota para remover um produto
+    [HttpDelete("{id:int:min(1)}")]
     public ActionResult Delete(int id)
     {
-        var produto = _context.Produtos.FirstOrDefault(p => p.ProdutoId == id);
-        if (produto is null)
+        try
         {
-            return NotFound("Produto não encontrado!");
+            var produto = _context.Produtos.FirstOrDefault(p => p.ProdutoId == id);
+            if (produto is null)
+            {
+                return NotFound("Produto não encontrado!");
+            }
+
+            _context.Produtos.Remove(produto);
+            _context.SaveChanges();
+
+            return Ok($"{produto.Nome} removido com sucesso!");
         }
-        _context.Produtos.Remove(produto);
-        _context.SaveChanges();
-        return Ok($"{produto.Nome} removido com sucesso!");
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Erro ao remover produto: {ex.Message}");
+        }
     }
 }

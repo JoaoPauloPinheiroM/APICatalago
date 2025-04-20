@@ -1,6 +1,6 @@
 ﻿using APICatalago.Context;
+using APICatalago.Filters;
 using APICatalago.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +17,7 @@ public class CategoriasController : Controller
         _context = context;
     }
 
-    // GET: Categorias/Produtos
+    //Recupera as categorias com os produtos relacionados
     [HttpGet("produtos")]
     public async Task<ActionResult<IEnumerable<Categoria>>> GetCategoriasProdutosAsync()
     {
@@ -36,8 +36,8 @@ public class CategoriasController : Controller
         }
     }
 
-    // GET: Categorias
     [HttpGet]
+    [ServiceFilter(typeof(ApiLogginFilter))]
     public async Task<ActionResult<IEnumerable<Categoria>>> GetAsync()
     {
         try
@@ -61,7 +61,6 @@ public class CategoriasController : Controller
         }
     }
 
-    // GET: Categorias/Por Id
     [HttpGet("{id:int}", Name = "ObterCategoria")]
     public async Task<ActionResult<Categoria>> GetAsync(int id)
     {
@@ -86,7 +85,6 @@ public class CategoriasController : Controller
         }
     }
 
-    // POST: Categorias
     [HttpPost]
     public ActionResult<Categoria> Post(Categoria categoria)
     {
@@ -113,7 +111,6 @@ public class CategoriasController : Controller
         }
     }
 
-    // PUT: Categorias
     [HttpPut("{id:int:min(1)}")]
     public ActionResult<Categoria> Put(int id, Categoria categoria)
     {
@@ -144,7 +141,6 @@ public class CategoriasController : Controller
         }
     }
 
-    // DELETE: Categorias
     [HttpDelete("{id:int:min(1)}")]
     public ActionResult<Categoria> Delete(int id)
     {

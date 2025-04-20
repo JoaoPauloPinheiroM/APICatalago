@@ -1,4 +1,6 @@
 using APICatalago.Context;
+using APICatalago.Extensions;
+using APICatalago.Filters;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
@@ -19,6 +21,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                                 options.UseMySql(mysqlConnectionString,
                                 ServerVersion.AutoDetect(mysqlConnectionString)));
 
+builder.Services.AddScoped<ApiLogginFilter>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -26,12 +30,13 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.ConfigureApiExceptionHandle(); // estamos mostrando a pilha por que estamos no ambiente de desenvolvimento
 }
 
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
-app.MapControllers(); // usado para mapear os controllers com atributo [ApiController] e [Route]
+app.MapControllers();
 
 app.Run();

@@ -4,163 +4,98 @@ using APICatalago.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace APICatalago.Controllers;
-
 [Route("api/[controller]")]
 [ApiController]
 public class CategoriasController : Controller
 {
-    private readonly AppDbContext _context;
+    private readonly AppDbContext _contexto;
 
     public CategoriasController(AppDbContext context)
     {
-        _context = context;
+        _contexto = context;
     }
 
-    //Recupera as categorias com os produtos relacionados
+    // Retorna categorias junto com seus produtos (relacionamento incluído)
     [HttpGet("produtos")]
     public async Task<ActionResult<IEnumerable<Categoria>>> GetCategoriasProdutosAsync()
     {
-        try
-        {
-            return await _context
-                .Categorias
-                .AsNoTracking()
-                .Include(c => c.Produtos)
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                $"Erro ao tentar recuperar os produtos das categorias: {ex.Message}");
-        }
+        var categorias = await _contexto
+            .Categorias
+            .AsNoTracking()
+            .Include(c => c.Produtos)
+            .ToListAsync();
+
+        return categorias;
     }
 
+    // Retorna todas as categorias (sem produtos)
     [HttpGet]
-    [ServiceFilter(typeof(ApiLogginFilter))]
+    [ServiceFilter(typeof(ApiLogginFilter))] // Ativa o filtro de log para esta rota
     public async Task<ActionResult<IEnumerable<Categoria>>> GetAsync()
     {
-        try
-        {
-            var categorias = await _context
-                .Categorias
-                .AsNoTracking()
-                .ToListAsync();
+        var categorias = await _contexto
+            .Categorias
+            .AsNoTracking()
+            .ToListAsync();
 
-            if (!categorias.Any())
-            {
-                return NotFound("Nenhuma categoria encontrada!");
-            }
+        if (!categorias.Any())
+            return NotFound("Nenhuma categoria encontrada!");
 
-            return categorias;
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                $"Erro ao tentar recuperar as categorias: {ex.Message}");
-        }
+        return categorias;
     }
 
+    // Busca uma categoria específica por ID
     [HttpGet("{id:int}", Name = "ObterCategoria")]
     public async Task<ActionResult<Categoria>> GetAsync(int id)
     {
-        try
-        {
-            var categoria = await _context
-                .Categorias
-                .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.CategoriaId == id);
+        var categoria = await _contexto
+            .Categorias
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.CategoriaId == id);
 
-            if (categoria is null)
-            {
-                return NotFound("Categoria não encontrada!");
-            }
+        if (categoria is null)
+            return NotFound("Categoria não encontrada!");
 
-            return categoria;
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                $"Erro ao tentar recuperar a categoria: {ex.Message}");
-        }
+        return categoria;
     }
 
+    // Cria uma nova categoria
     [HttpPost]
     public ActionResult<Categoria> Post(Categoria categoria)
     {
-        try
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            if (categoria is null)
-            {
-                return BadRequest("Categoria inválida!");
-            }
+        if (!ModelState.IsValid || categoria is null)
+            return BadRequest("Dados inválidos!");
 
-            _context.Categorias.Add(categoria);
-            _context.SaveChanges();
+        _contexto.Categorias.Add(categoria);
+        _contexto.SaveChanges();
 
-            return CreatedAtRoute("ObterCategoria", new { id = categoria.CategoriaId }, categoria);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                $"Erro ao adicionar categoria: {ex.Message}");
-        }
+        return CreatedAtRoute("ObterCategoria", new { id = categoria.CategoriaId }, categoria);
     }
 
+    // Atualiza uma categoria existente
     [HttpPut("{id:int:min(1)}")]
     public ActionResult<Categoria> Put(int id, Categoria categoria)
     {
-        try
-        {
-            if (id != categoria.CategoriaId)
-            {
-                return BadRequest("Id inválido!");
-            }
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            if (categoria is null)
-            {
-                return BadRequest("Categoria inválida!");
-            }
+        if (id != categoria.CategoriaId || !ModelState.IsValid || categoria is null)
+            return BadRequest("Dados inválidos ou inconsistentes!");
 
-            _context.Entry(categoria).State = EntityState.Modified;
-            _context.SaveChanges();
+        _contexto.Entry(categoria).State = EntityState.Modified;
+        _contexto.SaveChanges();
 
-            return Ok(categoria);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                $"Erro ao atualizar categoria: {ex.Message}");
-        }
+        return Ok(categoria);
     }
 
+    // Remove uma categoria
     [HttpDelete("{id:int:min(1)}")]
     public ActionResult<Categoria> Delete(int id)
     {
-        try
-        {
-            var categoria = _context.Categorias.FirstOrDefault(p => p.CategoriaId == id);
-            if (categoria is null)
-            {
-                return NotFound("Categoria não encontrada!");
-            }
+        var categoria = _contexto.Categorias.FirstOrDefault(p => p.CategoriaId == id);
+        if (categoria is null)
+            return NotFound("Categoria não encontrada!");
 
-            _context.Categorias.Remove(categoria);
-            _context.SaveChanges();
+        _contexto.Categorias.Remove(categoria);
+        _contexto.SaveChanges();
 
-            return Ok(categoria);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                $"Erro ao remover categoria: {ex.Message}");
-        }
+        return Ok(categoria);
     }
 }

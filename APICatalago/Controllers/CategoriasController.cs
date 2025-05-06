@@ -1,101 +1,116 @@
-﻿using APICatalago.Context;
-using APICatalago.Filters;
+﻿using APICatalago.Filters;
 using APICatalago.Models;
+using APICatalago.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+
+namespace APICatalago.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class CategoriasController : Controller
+public class CategoriasController : ControllerBase
 {
-    private readonly AppDbContext _contexto;
+    private readonly CategoriaServices _categoriaService;
+    private readonly ILogger<CategoriasController> _logger;
 
-    public CategoriasController(AppDbContext context)
+    public CategoriasController(CategoriaServices categoriaService, ILogger<CategoriasController> logger)
     {
-        _contexto = context;
+        _categoriaService = categoriaService;
+        _logger = logger;
     }
 
-    // Retorna categorias junto com seus produtos (relacionamento incluído)
-    [HttpGet("produtos")]
-    public async Task<ActionResult<IEnumerable<Categoria>>> GetCategoriasProdutosAsync()
-    {
-        var categorias = await _contexto
-            .Categorias
-            .AsNoTracking()
-            .Include(c => c.Produtos)
-            .ToListAsync();
-
-        return categorias;
-    }
-
-    // Retorna todas as categorias (sem produtos)
     [HttpGet]
-    [ServiceFilter(typeof(ApiLogginFilter))] // Ativa o filtro de log para esta rota
-    public async Task<ActionResult<IEnumerable<Categoria>>> GetAsync()
+    [ServiceFilter(typeof(ApiLogginFilter))]
+    public IActionResult Get()
     {
-        var categorias = await _contexto
-            .Categorias
-            .AsNoTracking()
-            .ToListAsync();
+        _logger.LogInformation("Requisição GET para listar todas as categorias.");
+        var categorias = _categoriaService.GetCategorias();
 
         if (!categorias.Any())
-            return NotFound("Nenhuma categoria encontrada!");
+            return LogAndReturnNotFound("Nenhuma categoria encontrada.");
 
-        return categorias;
+        _logger.LogInformation("Categorias listadas com sucesso.");
+        return Ok(categorias);
     }
 
-    // Busca uma categoria específica por ID
     [HttpGet("{id:int}", Name = "ObterCategoria")]
-    public async Task<ActionResult<Categoria>> GetAsync(int id)
+    public IActionResult Get(int id)
     {
-        var categoria = await _contexto
-            .Categorias
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.CategoriaId == id);
+        _logger.LogInformation("Requisição GET para categoria com ID {Id}.", id);
+        var categoria = _categoriaService.GetCategoria(id);
 
-        if (categoria is null)
-            return NotFound("Categoria não encontrada!");
+        if (categoria == null)
+            return LogAndReturnNotFound($"Categoria com ID {id} não encontrada.");
 
-        return categoria;
+        _logger.LogInformation("Categoria com ID {Id} retornada com sucesso.", id);
+        return Ok(categoria);
     }
 
-    // Cria uma nova categoria
     [HttpPost]
-    public ActionResult<Categoria> Post(Categoria categoria)
+    public IActionResult Post(Categoria categoria)
     {
-        if (!ModelState.IsValid || categoria is null)
-            return BadRequest("Dados inválidos!");
+        _logger.LogInformation("Requisição POST para criar uma nova categoria.");
 
-        _contexto.Categorias.Add(categoria);
-        _contexto.SaveChanges();
+        if (!IsValid(categoria, out var erro)) return erro;
 
-        return CreatedAtRoute("ObterCategoria", new { id = categoria.CategoriaId }, categoria);
+        var novaCategoria = _categoriaService.Create(categoria);
+        _logger.LogInformation("Categoria criada com ID {Id}.", novaCategoria.CategoriaId);
+
+        return CreatedAtRoute("ObterCategoria", new { id = novaCategoria.CategoriaId }, novaCategoria);
     }
 
-    // Atualiza uma categoria existente
     [HttpPut("{id:int:min(1)}")]
-    public ActionResult<Categoria> Put(int id, Categoria categoria)
+    public IActionResult Put(int id, Categoria categoria)
     {
-        if (id != categoria.CategoriaId || !ModelState.IsValid || categoria is null)
-            return BadRequest("Dados inválidos ou inconsistentes!");
+        _logger.LogInformation("Requisição PUT para atualizar categoria com ID {Id}.", id);
 
-        _contexto.Entry(categoria).State = EntityState.Modified;
-        _contexto.SaveChanges();
+        if (categoria == null || id != categoria.CategoriaId)
+            return LogAndReturnBadRequest("Dados inválidos ou inconsistentes.");
 
-        return Ok(categoria);
+        if (!ModelState.IsValid)
+            return LogAndReturnBadRequest("Modelo inválido.");
+
+        var atualizada = _categoriaService.Update(categoria);
+        _logger.LogInformation("Categoria com ID {Id} atualizada com sucesso.", id);
+
+        return Ok(atualizada);
     }
 
-    // Remove uma categoria
     [HttpDelete("{id:int:min(1)}")]
-    public ActionResult<Categoria> Delete(int id)
+    public IActionResult Delete(int id)
     {
-        var categoria = _contexto.Categorias.FirstOrDefault(p => p.CategoriaId == id);
-        if (categoria is null)
-            return NotFound("Categoria não encontrada!");
+        _logger.LogInformation("Requisição DELETE para excluir categoria com ID {Id}.", id);
+        var excluida = _categoriaService.Delete(id);
 
-        _contexto.Categorias.Remove(categoria);
-        _contexto.SaveChanges();
+        if (excluida == null)
+            return LogAndReturnNotFound($"Categoria com ID {id} não encontrada para exclusão.");
 
-        return Ok(categoria);
+        _logger.LogInformation("Categoria com ID {Id} excluída com sucesso.", id);
+        return Ok(excluida);
+    }
+
+    //==== MÉTODOS AUXILIARES ====
+
+    private bool IsValid(Categoria categoria, out IActionResult erro)
+    {
+        if (categoria == null || !ModelState.IsValid)
+        {
+            erro = LogAndReturnBadRequest("Dados inválidos.");
+            return false;
+        }
+
+        erro = null!;
+        return true;
+    }
+
+    private IActionResult LogAndReturnNotFound(string message)
+    {
+        _logger.LogWarning(message);
+        return NotFound(new { erro = message });
+    }
+
+    private IActionResult LogAndReturnBadRequest(string message)
+    {
+        _logger.LogError(message);
+        return BadRequest(new { erro = message });
     }
 }

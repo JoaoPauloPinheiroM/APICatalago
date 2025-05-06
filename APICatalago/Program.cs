@@ -1,10 +1,14 @@
 using APICatalago.Context;
-using APICatalago.Extensions;
 using APICatalago.Filters;
+using APICatalago.Filters.Extensions;
 using APICatalago.Logging;
+using APICatalago.Repositories;
+using APICatalago.Repositories.Interfaces;
+using APICatalago.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
+//Cria o builder para configurar o aplicativo
 var builder = WebApplication.CreateBuilder(args);
 
 // Configura os controllers e evita loops de referência no JSON
@@ -36,6 +40,14 @@ builder.Logging.AddProvider(new CustomLoggerProvider(new CustomLoggerProviderCon
 {
     LogLevel = LogLevel.Information
 }));
+
+//Cofigura as dependencias do repositorio
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IUnitOfWork, UniOfWork>();
+
+// Configura a dependencia do service
+builder.Services.AddScoped<CategoriaServices>();
+builder.Services.AddScoped<ProdutoServices>();
 
 var app = builder.Build();
 

@@ -16,14 +16,26 @@ namespace APICatalago.Filters
         // Executado automaticamente quando uma exceção ocorre durante uma requisição
         public void OnException(ExceptionContext context)
         {
-            // Registra o erro no log
             _logger.LogError($"Ocorreu uma exceção: {context.Exception.Message}");
 
-            // Retorna resposta padrão com status 500 (erro interno)
-            context.Result = new ObjectResult("Ocorreu um erro ao processar sua requisição")
+            if (context.Exception is ArgumentNullException)
             {
-                StatusCode = StatusCodes.Status500InternalServerError
-            };
+                context.Result = new NotFoundObjectResult(context.Exception.Message);
+                context.ExceptionHandled = true;
+            }
+            else if (context.Exception is ArgumentException)
+            {
+                context.Result = new BadRequestObjectResult(context.Exception.Message);
+                context.ExceptionHandled = true;
+            }
+            else
+            {
+                context.Result = new ObjectResult("Ocorreu um erro ao processar sua requisição")
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError
+                };
+                context.ExceptionHandled = true;
+            }
         }
     }
 }

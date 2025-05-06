@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Diagnostics;
 
 using System.Net;
 
-namespace APICatalago.Extensions;
+namespace APICatalago.Filters.Extensions;
 
 public static class ApiExceptionMiddlewareExtensions
 {

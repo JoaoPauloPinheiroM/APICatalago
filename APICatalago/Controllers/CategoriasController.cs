@@ -1,4 +1,6 @@
-﻿using APICatalago.Filters;
+﻿using APICatalago.DTOs;
+using APICatalago.DTOs.Mappings;
+using APICatalago.Filters;
 using APICatalago.Models;
 using APICatalago.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -20,97 +22,114 @@ public class CategoriasController : ControllerBase
 
     [HttpGet]
     [ServiceFilter(typeof(ApiLogginFilter))]
-    public IActionResult Get()
+    public ActionResult<IEnumerable<CategoriaDTO>> Get()
     {
-        _logger.LogInformation("Requisição GET para listar todas as categorias.");
+        LogRequest("GET", "listar todas as categorias");
+
         var categorias = _categoriaService.GetCategorias();
 
         if (!categorias.Any())
-            return LogAndReturnNotFound("Nenhuma categoria encontrada.");
+            return LogAndReturnNotFound<IEnumerable<CategoriaDTO>>("Nenhuma categoria encontrada.");
 
-        _logger.LogInformation("Categorias listadas com sucesso.");
-        return Ok(categorias);
+        LogSuccess("Categorias listadas com sucesso");
+
+        return Ok(categorias.ToDTOList());
     }
 
     [HttpGet("{id:int}", Name = "ObterCategoria")]
-    public IActionResult Get(int id)
+    public ActionResult<CategoriaDTO> Get(int id)
     {
-        _logger.LogInformation("Requisição GET para categoria com ID {Id}.", id);
+        LogRequest("GET", $"categoria com ID {id}");
+
         var categoria = _categoriaService.GetCategoria(id);
 
         if (categoria == null)
-            return LogAndReturnNotFound($"Categoria com ID {id} não encontrada.");
+            return LogAndReturnNotFound<CategoriaDTO>($"Categoria com ID {id} não encontrada.");
 
-        _logger.LogInformation("Categoria com ID {Id} retornada com sucesso.", id);
-        return Ok(categoria);
+        LogSuccess($"Categoria com ID {id} retornada com sucesso");
+
+        return Ok(categoria.ToDTO());
     }
 
     [HttpPost]
-    public IActionResult Post(Categoria categoria)
+    public ActionResult<CategoriaDTO> Post(CategoriaDTO categoriaDto)
     {
-        _logger.LogInformation("Requisição POST para criar uma nova categoria.");
+        LogRequest("POST", "criar uma nova categoria");
 
-        if (!IsValid(categoria, out var erro)) return erro;
+        if (!IsValid<CategoriaDTO>(categoriaDto, out var erro)) return erro;
 
-        var novaCategoria = _categoriaService.Create(categoria);
-        _logger.LogInformation("Categoria criada com ID {Id}.", novaCategoria.CategoriaId);
+        var novaCategoria = _categoriaService.Create(categoriaDto.ToEntity());
+        var novaCategoriaDto = novaCategoria.ToDTO();
 
-        return CreatedAtRoute("ObterCategoria", new { id = novaCategoria.CategoriaId }, novaCategoria);
+        LogSuccess($"Categoria criada com ID {novaCategoriaDto.CategoriaId}");
+
+        return CreatedAtRoute("ObterCategoria", new { id = novaCategoriaDto.CategoriaId }, novaCategoriaDto);
     }
 
     [HttpPut("{id:int:min(1)}")]
-    public IActionResult Put(int id, Categoria categoria)
+    public ActionResult<CategoriaDTO> Put(int id, CategoriaDTO categoriaDto)
     {
-        _logger.LogInformation("Requisição PUT para atualizar categoria com ID {Id}.", id);
+        LogRequest("PUT", $"atualizar categoria com ID {id}");
 
-        if (categoria == null || id != categoria.CategoriaId)
-            return LogAndReturnBadRequest("Dados inválidos ou inconsistentes.");
+        if (categoriaDto == null || id != categoriaDto.CategoriaId)
+            return LogAndReturnBadRequest<CategoriaDTO>("Dados inválidos ou inconsistentes.");
 
         if (!ModelState.IsValid)
-            return LogAndReturnBadRequest("Modelo inválido.");
+            return LogAndReturnBadRequest<CategoriaDTO>("Modelo inválido.");
 
+        var categoria = categoriaDto.ToEntity();
         var atualizada = _categoriaService.Update(categoria);
-        _logger.LogInformation("Categoria com ID {Id} atualizada com sucesso.", id);
+        var categoriaAtualizadaDTO = atualizada.ToDTO();
 
-        return Ok(atualizada);
+        LogSuccess($"Categoria com ID {id} atualizada com sucesso");
+
+        return Ok(categoriaAtualizadaDTO);
     }
 
     [HttpDelete("{id:int:min(1)}")]
-    public IActionResult Delete(int id)
+    public ActionResult<CategoriaDTO> Delete(int id)
     {
-        _logger.LogInformation("Requisição DELETE para excluir categoria com ID {Id}.", id);
+        LogRequest("DELETE", $"excluir categoria com ID {id}");
+
         var excluida = _categoriaService.Delete(id);
 
         if (excluida == null)
-            return LogAndReturnNotFound($"Categoria com ID {id} não encontrada para exclusão.");
+            return LogAndReturnNotFound<CategoriaDTO>($"Categoria com ID {id} não encontrada para exclusão.");
 
-        _logger.LogInformation("Categoria com ID {Id} excluída com sucesso.", id);
-        return Ok(excluida);
+        LogSuccess($"Categoria com ID {id} excluída com sucesso");
+
+        return Ok(excluida.ToDTO());
     }
 
     //==== MÉTODOS AUXILIARES ====
 
-    private bool IsValid(Categoria categoria, out IActionResult erro)
+    private bool IsValid<T>(object dto, out ActionResult<T>? erro)
     {
-        if (categoria == null || !ModelState.IsValid)
+        if (dto == null || !ModelState.IsValid)
         {
-            erro = LogAndReturnBadRequest("Dados inválidos.");
+            erro = LogAndReturnBadRequest<T>("Dados inválidos.");
             return false;
         }
 
-        erro = null!;
+        erro = null;
         return true;
     }
 
-    private IActionResult LogAndReturnNotFound(string message)
+    private ActionResult<T> LogAndReturnNotFound<T>(string message)
     {
         _logger.LogWarning(message);
         return NotFound(new { erro = message });
     }
 
-    private IActionResult LogAndReturnBadRequest(string message)
+    private ActionResult<T> LogAndReturnBadRequest<T>(string message)
     {
         _logger.LogError(message);
         return BadRequest(new { erro = message });
     }
+
+    private void LogRequest(string metodo, string acao) =>
+        _logger.LogInformation("Requisição {Metodo} para {Acao}.", metodo.ToUpper(), acao);
+
+    private void LogSuccess(string mensagem) =>
+        _logger.LogInformation(mensagem);
 }

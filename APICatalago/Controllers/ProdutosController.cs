@@ -1,129 +1,141 @@
-﻿using APICatalago.Models;
+﻿using APICatalago.DTOs;
+using APICatalago.DTOs.Mappings;
+using APICatalago.Models;
 using APICatalago.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
-namespace APICatalago.Controllers;
-
-[Route("api/[controller]")]
-[ApiController]
-public class ProdutosController : ControllerBase
+namespace APICatalago.Controllers
 {
-    private readonly ProdutoServices _produtoServices;
-    private readonly ILogger<ProdutosController> _logger;
-
-    public ProdutosController(ProdutoServices service, ILogger<ProdutosController> logger)
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ProdutosController : ControllerBase
     {
-        _produtoServices = service;
-        _logger = logger;
-    }
+        private readonly ProdutoServices _produtoServices;
+        private readonly ILogger<ProdutosController> _logger;
 
-    [HttpGet]
-    public IActionResult Get()
-    {
-        _logger.LogInformation("Requisição GET para listar todos os produtos.");
-        var produtos = _produtoServices.GetProdutos();
-
-        if (!produtos.Any())
-            return LogAndReturnNotFound("Nenhum produto encontrado.");
-
-        _logger.LogInformation("Lista de produtos retornada com sucesso.");
-        return Ok(produtos);
-    }
-
-    [HttpGet("categoria/{id:int}")]
-    public IActionResult GetPorCategoria(int id)
-    {
-        _logger.LogInformation("Requisição GET para listar produtos da categoria com ID {Id}.", id);
-        var produtos = _produtoServices.GetProdutosPorCategoria(id);
-        if (!produtos.Any())
-            return LogAndReturnNotFound($"Nenhum produto encontrado para a categoria com ID {id}.");
-        _logger.LogInformation("Lista de produtos da categoria com ID {Id} retornada com sucesso.", id);
-        return Ok(produtos);
-    }
-
-    [HttpGet("{id:int}", Name = "ObterProduto")]
-    public IActionResult Get(int id)
-    {
-        _logger.LogInformation("Requisição GET para produto com ID {Id}.", id);
-        var produto = _produtoServices.GetProduto(id);
-
-        if (produto == null)
-            return LogAndReturnNotFound($"Produto com ID {id} não encontrado.");
-
-        _logger.LogInformation("Produto com ID {Id} retornado com sucesso.", id);
-        return Ok(produto);
-    }
-
-    [HttpPost]
-    public IActionResult Post(Produto produto)
-    {
-        _logger.LogInformation("Requisição POST para criar novo produto.");
-
-        if (!IsValid(produto, out var erro))
-            return erro;
-
-        var novoProduto = _produtoServices.Create(produto);
-        _logger.LogInformation("Produto criado com sucesso. ID: {Id}", novoProduto.ProdutoId);
-
-        return CreatedAtRoute("ObterProduto", new { id = novoProduto.ProdutoId }, novoProduto);
-    }
-
-    [HttpPut("{id:int}")]
-    public IActionResult Put(int id, Produto produto)
-    {
-        _logger.LogInformation("Requisição PUT para atualizar produto com ID {Id}.", id);
-
-        if (produto == null || id != produto.ProdutoId)
-            return LogAndReturnBadRequest("ID do produto não corresponde ou produto é nulo.");
-
-        if (!IsValid(produto, out var erro))
-            return erro;
-
-        var atualizado = _produtoServices.Update(produto);
-        if (atualizado is null)
-            return StatusCode(500, $"Erro ao atualizar o produto id: {id}.");
-
-        _logger.LogInformation("Produto com ID {Id} atualizado com sucesso.", id);
-        return Ok(produto);
-    }
-
-    [HttpDelete("{id:int}")]
-    public IActionResult Delete(int id)
-    {
-        _logger.LogInformation("Requisição DELETE para produto com ID {Id}.", id);
-        var produto = _produtoServices.Delete(id);
-
-        if (produto == null)
-            return LogAndReturnNotFound($"Produto com ID {id} não encontrado para exclusão.");
-
-        _logger.LogInformation("Produto com ID {Id} excluído com sucesso.", id);
-        return Ok($"{produto.Nome} removido com sucesso.");
-    }
-
-    //==== MÉTODOS AUXILIARES ====
-
-    private bool IsValid(Produto produto, out IActionResult erro)
-    {
-        if (produto == null || !ModelState.IsValid)
+        public ProdutosController(ProdutoServices service, ILogger<ProdutosController> logger)
         {
-            erro = LogAndReturnBadRequest("Dados inválidos.");
-            return false;
+            _produtoServices = service;
+            _logger = logger;
         }
 
-        erro = null!;
-        return true;
-    }
+        [HttpGet]
+        public ActionResult<IEnumerable<ProdutoDTO>> Get()
+        {
+            LogRequest("GET", "listar todos os produtos");
+            var produtos = _produtoServices.GetProdutos();
 
-    private IActionResult LogAndReturnNotFound(string message)
-    {
-        _logger.LogWarning(message);
-        return NotFound(new { erro = message });
-    }
+            if (!produtos.Any())
+                return LogAndReturnNotFound<IEnumerable<ProdutoDTO>>("Nenhum produto encontrado.");
 
-    private IActionResult LogAndReturnBadRequest(string message)
-    {
-        _logger.LogError(message);
-        return BadRequest(new { erro = message });
+            LogSuccess("Produtos listados com sucesso.");
+            return Ok(produtos.ToDTOList());
+        }
+
+        [HttpGet("categoria/{id:int}")]
+        public ActionResult<IEnumerable<ProdutoDTO>> GetPorCategoria(int id)
+        {
+            LogRequest("GET", $"listar produtos da categoria com ID {id}");
+            var produtos = _produtoServices.GetProdutosPorCategoria(id);
+
+            if (!produtos.Any())
+                return LogAndReturnNotFound<IEnumerable<ProdutoDTO>>($"Nenhum produto encontrado para a categoria com ID {id}.");
+
+            LogSuccess($"Produtos da categoria com ID {id} listados com sucesso.");
+            return Ok(produtos.ToDTOList());
+        }
+
+        [HttpGet("{id:int}", Name = "ObterProduto")]
+        public ActionResult<ProdutoDTO> Get(int id)
+        {
+            LogRequest("GET", $"produto com ID {id}");
+            var produto = _produtoServices.GetProduto(id);
+
+            if (produto == null)
+                return LogAndReturnNotFound<ProdutoDTO>($"Produto com ID {id} não encontrado.");
+
+            LogSuccess($"Produto com ID {id} retornado com sucesso.");
+            return Ok(produto.ToDTO());
+        }
+
+        [HttpPost]
+        public ActionResult<ProdutoDTO> Post(ProdutoDTO produtoDto)
+        {
+            LogRequest("POST", "criar novo produto");
+
+            if (!IsValid<ProdutoDTO>(produtoDto, out var erro)) return erro;
+
+            var novoProduto = _produtoServices.Create(produtoDto.ToEntity());
+            var novoProdutoDto = novoProduto.ToDTO();
+
+            LogSuccess($"Produto criado com sucesso. ID: {novoProdutoDto.ProdutoId}");
+            return CreatedAtRoute("ObterProduto", new { id = novoProdutoDto.ProdutoId }, novoProdutoDto);
+        }
+
+        [HttpPut("{id:int}")]
+        public ActionResult<ProdutoDTO> Put(int id, ProdutoDTO produtoDto)
+        {
+            LogRequest("PUT", $"atualizar produto com ID {id}");
+
+            if (produtoDto == null || id != produtoDto.ProdutoId)
+                return LogAndReturnBadRequest<ProdutoDTO>("ID do produto não corresponde ou produto é nulo.");
+
+            if (!ModelState.IsValid)
+                return LogAndReturnBadRequest<ProdutoDTO>("Dados inválidos.");
+
+            var atualizado = _produtoServices.Update(produtoDto.ToEntity());
+
+            if (atualizado is null)
+                return StatusCode(500, new { erro = $"Erro ao atualizar o produto ID: {id}." });
+
+            LogSuccess($"Produto com ID {id} atualizado com sucesso.");
+            return Ok(atualizado.ToDTO());
+        }
+
+        [HttpDelete("{id:int}")]
+        public ActionResult<ProdutoDTO> Delete(int id)
+        {
+            LogRequest("DELETE", $"excluir produto com ID {id}");
+            var excluido = _produtoServices.Delete(id);
+
+            if (excluido == null)
+                return LogAndReturnNotFound<ProdutoDTO>($"Produto com ID {id} não encontrado para exclusão.");
+
+            LogSuccess($"Produto com ID {id} excluído com sucesso.");
+            return Ok(excluido.ToDTO());
+        }
+
+        //==== MÉTODOS AUXILIARES ====
+
+        private bool IsValid<T>(object dto, out ActionResult<T>? erro)
+        {
+            if (dto == null || !ModelState.IsValid)
+            {
+                erro = LogAndReturnBadRequest<T>("Dados inválidos.");
+                return false;
+            }
+
+            erro = null;
+            return true;
+        }
+
+        private ActionResult<T> LogAndReturnNotFound<T>(string message)
+        {
+            _logger.LogWarning(message);
+            return NotFound(new { erro = message });
+        }
+
+        private ActionResult<T> LogAndReturnBadRequest<T>(string message)
+        {
+            _logger.LogError(message);
+            return BadRequest(new { erro = message });
+        }
+
+        private void LogRequest(string metodo, string acao) =>
+            _logger.LogInformation("Requisição {Metodo} para {Acao}.", metodo.ToUpper(), acao);
+
+        private void LogSuccess(string mensagem) =>
+            _logger.LogInformation(mensagem);
     }
 }

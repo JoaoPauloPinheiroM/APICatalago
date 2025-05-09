@@ -1,4 +1,5 @@
 using APICatalago.Context;
+using APICatalago.DTOs.Mappings;
 using APICatalago.Filters;
 using APICatalago.Filters.Extensions;
 using APICatalago.Logging;
@@ -48,6 +49,14 @@ builder.Services.AddScoped<IUnitOfWork, UniOfWork>();
 // Configura a dependencia do service
 builder.Services.AddScoped<CategoriaServices>();
 builder.Services.AddScoped<ProdutoServices>();
+
+//Configura do DTO
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile(new ProdutoMapper());
+});
+// Substitua a linha problemática com a seguinte abordagem explícita para resolver a ambiguidade:
+builder.Services.AddAutoMapper(typeof(ProdutoMapper));
 
 var app = builder.Build();
 

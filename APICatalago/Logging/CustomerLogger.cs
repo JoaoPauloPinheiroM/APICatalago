@@ -19,15 +19,12 @@ public class CustomerLogger : ILogger
         return logLevel == loggerConfig.LogLevel;
     }
 
-    //Permite criar um scope de log, mas não é implementado
-    public IDisposable BeginScope<TState>(TState state)
-    {
-        return null;
-    }
+    // Implementação explícita para corresponder à interface ILogger
+    IDisposable ILogger.BeginScope<TState>(TState state) => null!;
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
-        string messagem = $"{logLevel.ToString()}: {eventId.Id} - {formatter(state, exception)}";
+        string messagem = $"{logLevel}: {eventId.Id} - {formatter(state, exception)}";
 
         EscreverTextoNoArquivo(messagem);
     }
@@ -44,10 +41,6 @@ public class CustomerLogger : ILogger
             catch (Exception)
             {
                 throw;
-            }
-            finally
-            {
-                sw.Close();
             }
         }
     }

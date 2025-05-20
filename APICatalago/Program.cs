@@ -6,6 +6,8 @@ using APICatalago.Logging;
 using APICatalago.Repositories;
 using APICatalago.Repositories.Interfaces;
 using APICatalago.Services;
+
+using APICatalogo.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
@@ -21,7 +23,7 @@ builder.Services.AddControllers(options =>
 {
     // Configura o JsonSerializer para ignorar ciclos de referência
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-});
+}).AddNewtonsoftJson();
 
 // Habilita documentação Swagger
 builder.Services.AddEndpointsApiExplorer();

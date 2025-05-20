@@ -19,8 +19,8 @@ public static class CategoriaMappingExtensions
     public static IEnumerable<CategoriaDTO> ToDTOList(this IEnumerable<Categoria> entities)
     {
         if (entities == null || !entities.Any())
-            return new List<CategoriaDTO>();
-
+            return [];
+            
         return entities.Select(e => e.ToDTO()!)!;
     }
 

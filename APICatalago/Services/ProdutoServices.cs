@@ -1,5 +1,7 @@
 ﻿using APICatalago.Models;
+using APICatalago.Pagination;
 using APICatalago.Repositories.Interfaces;
+using APICatalago.Repositories;
 
 namespace APICatalago.Services;
 
@@ -33,6 +35,14 @@ public class ProdutoServices
         return produto;
     }
 
+    public PagedList<Produto> GetProdutos(ProdutosParameters produtosParameters)
+    {
+        var produtos = _unitOfWork.ProdutoRepository.GetProdutos(produtosParameters);
+        if (!produtos.Any())
+            throw new ArgumentNullException("Nenhum produto encontrado!");
+        return produtos;
+    }
+
     public Produto Create(Produto produto)
     {
         if (produto is null)
@@ -46,7 +56,9 @@ public class ProdutoServices
     {
         if (produto is null)
             throw new ArgumentNullException(nameof(produto));
-        return _unitOfWork.ProdutoRepository.Update(produto);
+        var produtoAtualizado = _unitOfWork.ProdutoRepository.Update(produto);
+        _unitOfWork.Commit();
+        return produtoAtualizado;
     }
 
     public Produto Delete(int id)

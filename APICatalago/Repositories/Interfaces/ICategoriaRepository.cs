@@ -1,5 +1,5 @@
 ﻿using APICatalago.Models;
-using System.Runtime.InteropServices;
+using APICatalogo.Repositories.Interfaces;
 
 namespace APICatalago.Repositories.Interfaces;
 

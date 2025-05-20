@@ -1,13 +1,16 @@
 ﻿using APICatalago.Models;
 using AutoMapper;
 
-namespace APICatalago.DTOs.Mappings;
-
-public class ProdutoMapper : Profile
+namespace APICatalago.DTOs.Mappings
 {
-    public ProdutoMapper()
+    public class ProdutoMapper : Profile
     {
-        CreateMap<Produto, ProdutoDTO>().ReverseMap();
-        CreateMap<Categoria, CategoriaDTO>().ReverseMap();
+        public ProdutoMapper()
+        {
+            CreateMap<Produto, ProdutoDTO>().ReverseMap();
+            CreateMap<Categoria, CategoriaDTO>().ReverseMap();
+            CreateMap<Produto, ProdutoDTOUpdateRequest>().ReverseMap();
+            CreateMap<Produto, ProdutoDTOUpdateResponse>().ReverseMap();
+        }
     }
 }

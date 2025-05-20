@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
-
-namespace APICatalago.Filters
+﻿namespace APICatalago.Filters
 {
+    using Microsoft.AspNetCore.Mvc;
+    using Microsoft.AspNetCore.Mvc.Filters;
+
     // Filtro global para capturar e tratar exceções não tratadas
     public class ApiExceptionFilter : IExceptionFilter
     {

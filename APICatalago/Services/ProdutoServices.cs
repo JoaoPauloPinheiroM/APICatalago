@@ -43,6 +43,14 @@ public class ProdutoServices
         return produtos;
     }
 
+    public PagedList<Produto> GetProdutosFiltroPreco(ProdutosFiltroPreco produtosFiltroparameters)
+    {
+        var produtos = _unitOfWork.ProdutoRepository.GetProdutosFiltroPreco(produtosFiltroparameters);
+        if (!produtos.Any())
+            throw new ArgumentNullException("Nenhum produto encontrado com os filtros informados!");
+        return produtos;
+    }
+
     public Produto Create(Produto produto)
     {
         if (produto is null)

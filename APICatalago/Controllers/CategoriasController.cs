@@ -2,8 +2,10 @@
 using APICatalago.DTOs.Mappings;
 using APICatalago.Filters;
 using APICatalago.Models;
+using APICatalago.Pagination;
 using APICatalago.Services;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 namespace APICatalago.Controllers;
 
@@ -18,6 +20,24 @@ public class CategoriasController : ControllerBase
     {
         _categoriaService = categoriaService;
         _logger = logger;
+    }
+
+    //==== ENDPOINTS ====
+
+    [HttpGet("Pagination")]
+    [ServiceFilter(typeof(ApiLogginFilter))]
+    public ActionResult<IEnumerable<CategoriaDTO>> GetCategoriaPagination([FromQuery] CategoriaParameters categoriaParameters)
+    {
+        var categorias = _categoriaService.GetCategorias(categoriaParameters);
+        return _ObterCategorias(categorias);
+    }
+
+    [HttpGet("filter/nome/Pagination")]
+    [ServiceFilter(typeof(ApiLogginFilter))]
+    public ActionResult<IEnumerable<CategoriaDTO>> GetCategoriasFiltroNome([FromQuery] CategoriasFiltroNome categoriasParams)
+    {
+        var categorias = _categoriaService.GetCategoriasFiltroNome(categoriasParams);
+        return _ObterCategorias(categorias);
     }
 
     [HttpGet]
@@ -102,6 +122,24 @@ public class CategoriasController : ControllerBase
     }
 
     //==== MÉTODOS AUXILIARES ====
+
+    private ActionResult<IEnumerable<CategoriaDTO>> _ObterCategorias(PagedList<Categoria> categorias)
+    {
+        var metaData = new
+        {
+            categorias.TotalCount,
+            categorias.PageSize,
+            categorias.CurrentPage,
+            categorias.TotalPages,
+            categorias.HasNext,
+            categorias.HasPrevious
+        };
+
+        Response.Headers["X-Pagination"] = JsonConvert.SerializeObject(metaData);
+        var categoriasDTO = categorias.ToDTOList();
+
+        return Ok(categoriasDTO);
+    }
 
     private bool IsValid<T>(object dto, out ActionResult<T>? erro)
     {

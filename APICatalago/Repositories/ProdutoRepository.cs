@@ -5,6 +5,7 @@ using APICatalago.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Net.WebSockets;
+using X.PagedList;
 
 namespace APICatalago.Repositories;
 
@@ -14,20 +15,22 @@ public class ProdutoRepository : Repository<Produto>, IProdutoRepository
     {
     }
 
-    public PagedList<Produto> GetProdutos(ProdutosParameters protudosParameters)
+    public async Task<IPagedList<Produto>> GetProdutosAsync(ProdutosParameters produtosParameters)
     {
-        var produtos = GetAll()
-            .OrderBy(p => p.ProdutoId).AsQueryable();
+        var produtos = await GetAllAsync();
+        var produtosOrdenados = produtos.OrderBy(p => p.ProdutoId).AsQueryable();
 
-        var produtosOrdenados =
-            PagedList<Produto>.ToPagedList(produtos, protudosParameters.PageNumber, protudosParameters.PageSize);
+        //var resultado =
+        //    PagedList<Produto>.ToPagedList(prdutosOrdenados, produtosParameters.PageNumber, produtosParameters.PageSize);
 
-        return produtosOrdenados;
+        var resultado = await produtosOrdenados.ToPagedListAsync(produtosParameters.PageNumber, produtosParameters.PageSize);
+
+        return resultado;
     }
 
-    public PagedList<Produto> GetProdutosFiltroPreco(ProdutosFiltroPreco produtosFiltroparameters)
+    public async Task<IPagedList<Produto>> GetProdutosFiltroPrecoAsync(ProdutosFiltroPreco produtosFiltroparameters)
     {
-        var produtos = GetAll().AsQueryable();
+        var produtos = await GetAllAsync();
         if (produtosFiltroparameters.Preco.HasValue && !string.IsNullOrEmpty(produtosFiltroparameters.PrecoCriterio))
         {
             switch (produtosFiltroparameters.PrecoCriterio.ToLower())
@@ -49,14 +52,16 @@ public class ProdutoRepository : Repository<Produto>, IProdutoRepository
             }
         }
 
-        var produtosFiltrados = PagedList<Produto>.ToPagedList(produtos, produtosFiltroparameters.PageNumber, produtosFiltroparameters.PageSize);
+        //var produtosFiltrados = PagedList<Produto>.ToPagedList(produtos.AsQueryable(), produtosFiltroparameters.PageNumber, produtosFiltroparameters.PageSize);
+        var produtosFiltrados = await produtos.AsQueryable()
+            .ToPagedListAsync(produtosFiltroparameters.PageNumber, produtosFiltroparameters.PageSize);
         return produtosFiltrados;
     }
 
-    public IEnumerable<Produto> GetProdutosPorCategoria(int id)
+    public async Task<IEnumerable<Produto>> GetProdutosPorCategoriaAsync(int id)
     {
-        return GetAll()
-            .Where(p => p.CategoriaId == id)
-            .ToList();
+        var produtos = await GetAllAsync();
+
+        return produtos.Where(p => p.CategoriaId == id).ToList();
     }
 }

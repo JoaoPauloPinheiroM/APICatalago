@@ -2,6 +2,6 @@
 
 
 
-GET {{APICatalago_HostAddress}}/weatherforecast
+GET {{APICatalago_HostAddress}}/api/Categorias
 
 ###

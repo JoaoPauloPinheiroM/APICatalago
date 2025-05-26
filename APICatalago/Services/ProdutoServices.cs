@@ -1,7 +1,7 @@
 ﻿using APICatalago.Models;
 using APICatalago.Pagination;
 using APICatalago.Repositories.Interfaces;
-using APICatalago.Repositories;
+using X.PagedList;
 
 namespace APICatalago.Services;
 
@@ -14,64 +14,64 @@ public class ProdutoServices
         _unitOfWork = unitOfWork;
     }
 
-    public IEnumerable<Produto> GetProdutosPorCategoria(int id)
+    public async Task<IEnumerable<Produto>> GetProdutosPorCategoriaAsync(int id)
     {
-        return _unitOfWork.ProdutoRepository.GetProdutosPorCategoria(id);
+        return await _unitOfWork.ProdutoRepository.GetProdutosPorCategoriaAsync(id);
     }
 
-    public IEnumerable<Produto> GetProdutos()
+    public async Task<IEnumerable<Produto>> GetProdutosAsync()
     {
-        var produto = _unitOfWork.ProdutoRepository.GetAll();
+        var produto = await _unitOfWork.ProdutoRepository.GetAllAsync();
         if (!produto.Any())
             throw new ArgumentNullException("Nenhum produto encontrado!");
         return produto;
     }
 
-    public Produto? GetProduto(int id)
+    public async Task<Produto?> GetProduto(int id)
     {
-        var produto = _unitOfWork.ProdutoRepository.Get(c => c.ProdutoId == id);
+        var produto = await _unitOfWork.ProdutoRepository.GetAsync(c => c.ProdutoId == id);
         if (produto is null)
             throw new ArgumentNullException("Produto não encontrado!");
         return produto;
     }
 
-    public PagedList<Produto> GetProdutos(ProdutosParameters produtosParameters)
+    public async Task<IPagedList<Produto>> GetProdutosAsync(ProdutosParameters produtosParameters)
     {
-        var produtos = _unitOfWork.ProdutoRepository.GetProdutos(produtosParameters);
+        var produtos = await _unitOfWork.ProdutoRepository.GetProdutosAsync(produtosParameters);
         if (!produtos.Any())
             throw new ArgumentNullException("Nenhum produto encontrado!");
         return produtos;
     }
 
-    public PagedList<Produto> GetProdutosFiltroPreco(ProdutosFiltroPreco produtosFiltroparameters)
+    public async Task<IPagedList<Produto>> GetProdutosFiltroPrecoAsync(ProdutosFiltroPreco produtosFiltroparameters)
     {
-        var produtos = _unitOfWork.ProdutoRepository.GetProdutosFiltroPreco(produtosFiltroparameters);
+        var produtos = await _unitOfWork.ProdutoRepository.GetProdutosFiltroPrecoAsync(produtosFiltroparameters);
         if (!produtos.Any())
             throw new ArgumentNullException("Nenhum produto encontrado com os filtros informados!");
         return produtos;
     }
 
-    public Produto Create(Produto produto)
+    public async Task<Produto> CreateAsync(Produto produto)
     {
         if (produto is null)
             throw new ArgumentNullException(nameof(produto));
         var produtoCriado = _unitOfWork.ProdutoRepository.Create(produto);
-        _unitOfWork.Commit();
+        await _unitOfWork.CommitAsync();
         return produtoCriado;
     }
 
-    public Produto Update(Produto produto)
+    public async Task<Produto> UpdateAsync(Produto produto)
     {
         if (produto is null)
             throw new ArgumentNullException(nameof(produto));
         var produtoAtualizado = _unitOfWork.ProdutoRepository.Update(produto);
-        _unitOfWork.Commit();
+        await _unitOfWork.CommitAsync();
         return produtoAtualizado;
     }
 
-    public Produto Delete(int id)
+    public async Task<Produto> DeleteAsync(int id)
     {
-        var produto = _unitOfWork.ProdutoRepository.Get(c => c.ProdutoId == id);
+        var produto = await _unitOfWork.ProdutoRepository.GetAsync(c => c.ProdutoId == id);
         if (produto is null)
             throw new KeyNotFoundException($"Produto com ID {id} não encontrado");
         return _unitOfWork.ProdutoRepository.Delete(produto);

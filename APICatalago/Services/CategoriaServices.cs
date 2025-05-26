@@ -1,6 +1,7 @@
 ﻿using APICatalago.Models;
 using APICatalago.Pagination;
 using APICatalago.Repositories.Interfaces;
+using X.PagedList;
 
 namespace APICatalago.Services
 {
@@ -13,60 +14,64 @@ namespace APICatalago.Services
             _unitOfWork = unitOfWork;
         }
 
-        public IEnumerable<Categoria> GetCategorias()
+        public async Task<IEnumerable<Categoria>> GetCategoriasAsync()
         {
-            var categorias = _unitOfWork.CategoriaRepository.GetAll();
+            var categorias = await _unitOfWork.CategoriaRepository.GetAllAsync();
             if (!categorias.Any())
                 throw new ArgumentNullException("Nenhuma categoria encontrada!");
             return categorias;
         }
 
-        public PagedList<Categoria> GetCategorias(CategoriaParameters categoriaParameters)
+        public async Task<IPagedList<Categoria>> GetCategoriasAsync(CategoriaParameters categoriaParameters)
         {
-            var categorias = _unitOfWork.CategoriaRepository.GetCategorias(categoriaParameters);
+            var categorias = await _unitOfWork.CategoriaRepository.GetCategoriasAsync(categoriaParameters);
             if (!categorias.Any())
                 throw new ArgumentNullException("Nenhuma categoria encontrada!");
             return categorias;
         }
 
-        public Categoria GetCategoria(int id)
+        public async Task<Categoria> GetCategoriaAsync(int id)
         {
-            var categoria = _unitOfWork.CategoriaRepository.Get(c => c.CategoriaId == id);
+            var categoria = await _unitOfWork.CategoriaRepository.GetAsync(c => c.CategoriaId == id);
             if (categoria is null)
                 throw new ArgumentNullException("Categoria não encontrada!");
             return categoria;
         }
 
-        public PagedList<Categoria> GetCategoriasFiltroNome(CategoriasFiltroNome categoriasParams)
+        public async Task<IPagedList<Categoria>> GetCategoriasFiltroNomeAsync(CategoriasFiltroNome categoriasParams)
         {
-            var categorias = _unitOfWork.CategoriaRepository.GetCategoriasFiltroNome(categoriasParams);
+            var categorias = await _unitOfWork.CategoriaRepository.GetCategoriasFiltroNomeAsync(categoriasParams);
             if (!categorias.Any())
                 throw new ArgumentNullException("Nenhuma categoria encontrada!");
             return categorias;
         }
 
-        public Categoria Create(Categoria categoria)
+        public async Task<Categoria> CreateAsync(Categoria categoria)
         {
             if (categoria is null)
                 throw new ArgumentNullException(nameof(categoria));
-            var categortiaCriada = _unitOfWork.CategoriaRepository.Create(categoria);
-            _unitOfWork.Commit();
-            return categortiaCriada;
+            var categoriaCriada = _unitOfWork.CategoriaRepository.Create(categoria);
+            await _unitOfWork.CommitAsync();
+            return categoriaCriada;
         }
 
-        public Categoria Update(Categoria categoria)
+        public async Task<Categoria> UpdateAsync(Categoria categoria)
         {
             if (categoria is null)
                 throw new ArgumentNullException(nameof(categoria));
-            return _unitOfWork.CategoriaRepository.Update(categoria);
+            var resultado = _unitOfWork.CategoriaRepository.Update(categoria);
+            await _unitOfWork.CommitAsync();
+            return resultado;
         }
 
-        public Categoria Delete(int id)
+        public async Task<Categoria> DeleteAsync(int id)
         {
-            var categoria = _unitOfWork.CategoriaRepository.Get(c => c.CategoriaId == id);
+            var categoria = await _unitOfWork.CategoriaRepository.GetAsync(c => c.CategoriaId == id);
             if (categoria is null)
                 throw new ArgumentNullException(nameof(categoria));
-            return _unitOfWork.CategoriaRepository.Delete(categoria);
+            var resultado = _unitOfWork.CategoriaRepository.Delete(categoria);
+            await _unitOfWork.CommitAsync();
+            return resultado;
         }
     }
 }

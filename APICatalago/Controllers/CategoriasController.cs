@@ -6,6 +6,7 @@ using APICatalago.Pagination;
 using APICatalago.Services;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using X.PagedList;
 
 namespace APICatalago.Controllers;
 
@@ -26,27 +27,27 @@ public class CategoriasController : ControllerBase
 
     [HttpGet("Pagination")]
     [ServiceFilter(typeof(ApiLogginFilter))]
-    public ActionResult<IEnumerable<CategoriaDTO>> GetCategoriaPagination([FromQuery] CategoriaParameters categoriaParameters)
+    public async Task<ActionResult<IEnumerable<CategoriaDTO>>> GetCategoriaPagination([FromQuery] CategoriaParameters categoriaParameters)
     {
-        var categorias = _categoriaService.GetCategorias(categoriaParameters);
+        var categorias = await _categoriaService.GetCategoriasAsync(categoriaParameters);
         return _ObterCategorias(categorias);
     }
 
     [HttpGet("filter/nome/Pagination")]
     [ServiceFilter(typeof(ApiLogginFilter))]
-    public ActionResult<IEnumerable<CategoriaDTO>> GetCategoriasFiltroNome([FromQuery] CategoriasFiltroNome categoriasParams)
+    public async Task<ActionResult<IEnumerable<CategoriaDTO>>> GetCategoriasFiltroNome([FromQuery] CategoriasFiltroNome categoriasParams)
     {
-        var categorias = _categoriaService.GetCategoriasFiltroNome(categoriasParams);
+        var categorias = await _categoriaService.GetCategoriasFiltroNomeAsync(categoriasParams);
         return _ObterCategorias(categorias);
     }
 
     [HttpGet]
     [ServiceFilter(typeof(ApiLogginFilter))]
-    public ActionResult<IEnumerable<CategoriaDTO>> Get()
+    public async Task<ActionResult<IEnumerable<CategoriaDTO>>> Get()
     {
         LogRequest("GET", "listar todas as categorias");
 
-        var categorias = _categoriaService.GetCategorias();
+        var categorias = await _categoriaService.GetCategoriasAsync();
 
         if (!categorias.Any())
             return LogAndReturnNotFound<IEnumerable<CategoriaDTO>>("Nenhuma categoria encontrada.");
@@ -57,11 +58,11 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpGet("{id:int}", Name = "ObterCategoria")]
-    public ActionResult<CategoriaDTO> Get(int id)
+    public async Task<ActionResult<CategoriaDTO>> Get(int id)
     {
         LogRequest("GET", $"categoria com ID {id}");
 
-        var categoria = _categoriaService.GetCategoria(id);
+        var categoria = await _categoriaService.GetCategoriaAsync(id);
 
         if (categoria == null)
             return LogAndReturnNotFound<CategoriaDTO>($"Categoria com ID {id} não encontrada.");
@@ -72,13 +73,13 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpPost]
-    public ActionResult<CategoriaDTO> Post(CategoriaDTO categoriaDto)
+    public async Task<ActionResult<CategoriaDTO>> Post(CategoriaDTO categoriaDto)
     {
         LogRequest("POST", "criar uma nova categoria");
 
         if (!IsValid<CategoriaDTO>(categoriaDto, out var erro)) return erro;
 
-        var novaCategoria = _categoriaService.Create(categoriaDto.ToEntity());
+        var novaCategoria = await _categoriaService.CreateAsync(categoriaDto.ToEntity());
         var novaCategoriaDto = novaCategoria.ToDTO();
 
         LogSuccess($"Categoria criada com ID {novaCategoriaDto.CategoriaId}");
@@ -87,7 +88,7 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpPut("{id:int:min(1)}")]
-    public ActionResult<CategoriaDTO> Put(int id, CategoriaDTO categoriaDto)
+    public async Task<ActionResult<CategoriaDTO>> Put(int id, CategoriaDTO categoriaDto)
     {
         LogRequest("PUT", $"atualizar categoria com ID {id}");
 
@@ -98,7 +99,7 @@ public class CategoriasController : ControllerBase
             return LogAndReturnBadRequest<CategoriaDTO>("Modelo inválido.");
 
         var categoria = categoriaDto.ToEntity();
-        var atualizada = _categoriaService.Update(categoria);
+        var atualizada = await _categoriaService.UpdateAsync(categoria);
         var categoriaAtualizadaDTO = atualizada.ToDTO();
 
         LogSuccess($"Categoria com ID {id} atualizada com sucesso");
@@ -107,11 +108,11 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpDelete("{id:int:min(1)}")]
-    public ActionResult<CategoriaDTO> Delete(int id)
+    public async Task<ActionResult<CategoriaDTO>> Delete(int id)
     {
         LogRequest("DELETE", $"excluir categoria com ID {id}");
 
-        var excluida = _categoriaService.Delete(id);
+        var excluida = await _categoriaService.DeleteAsync(id);
 
         if (excluida == null)
             return LogAndReturnNotFound<CategoriaDTO>($"Categoria com ID {id} não encontrada para exclusão.");
@@ -123,16 +124,16 @@ public class CategoriasController : ControllerBase
 
     //==== MÉTODOS AUXILIARES ====
 
-    private ActionResult<IEnumerable<CategoriaDTO>> _ObterCategorias(PagedList<Categoria> categorias)
+    private ActionResult<IEnumerable<CategoriaDTO>> _ObterCategorias(IPagedList<Categoria> categorias)
     {
         var metaData = new
         {
-            categorias.TotalCount,
+            categorias.Count,
             categorias.PageSize,
-            categorias.CurrentPage,
-            categorias.TotalPages,
-            categorias.HasNext,
-            categorias.HasPrevious
+            categorias.PageCount,
+            categorias.TotalItemCount,
+            categorias.HasNextPage,
+            categorias.HasPreviousPage
         };
 
         Response.Headers["X-Pagination"] = JsonConvert.SerializeObject(metaData);

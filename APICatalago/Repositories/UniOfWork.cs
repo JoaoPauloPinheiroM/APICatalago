@@ -36,9 +36,9 @@ public class UniOfWork : IUnitOfWork
         }
     }
 
-    public void Commit()
+    public async Task CommitAsync()
     {
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
     //Dispose -> Destruir o contexto

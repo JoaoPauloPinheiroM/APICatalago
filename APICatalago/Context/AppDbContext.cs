@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using APICatalago.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace APICatalago.Context
 {
-    public class AppDbContext : DbContext
+    public class AppDbContext : IdentityDbContext<ApplicationUser>
     {
         // Constructor that accepts DbContextOptions and passes it to the base class
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
@@ -13,5 +14,10 @@ namespace APICatalago.Context
         public DbSet<Categoria> Categorias { get; set; }
 
         public DbSet<Produto> Produtos { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+        }
     }
 }

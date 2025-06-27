@@ -1,76 +1,129 @@
+// =================================================================================================
+// USING STATEMENTS
+// =================================================================================================
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
+
 using APICatalago.Context;
 using APICatalago.DTOs.Mappings;
 using APICatalago.Filters;
-using APICatalago.Filters.Extensions;
 using APICatalago.Logging;
 using APICatalago.Repositories;
 using APICatalago.Repositories.Interfaces;
 using APICatalago.Services;
-
 using APICatalogo.Repositories.Interfaces;
-using Microsoft.EntityFrameworkCore;
-using System.Text.Json.Serialization;
+using APICatalago.Filters.Extensions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using APICatalago.Models;
 
-//Cria o builder para configurar o aplicativo
+// =================================================================================================
+// CONFIGURAÇÃO DA APLICAÇÃO WEB (BUILDER)
+// =================================================================================================
 var builder = WebApplication.CreateBuilder(args);
 
-// Configura os controllers e evita loops de referência no JSON
+// --- 1. Configuração de Serviços (Injeção de Dependência) --------------------------------------
+
+// Configuração base para Controllers e tratamento de JSON
 builder.Services.AddControllers(options =>
 {
-    // Adiciona o filtro de exceção global
-    options.Filters.Add(typeof(ApiExceptionFilter));
-}).AddJsonOptions(options =>
+    options.Filters.Add(typeof(ApiExceptionFilter)); // Filtro global para tratamento de exceções.
+})
+.AddJsonOptions(options =>
 {
-    // Configura o JsonSerializer para ignorar ciclos de referência
-    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-}).AddNewtonsoftJson();
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles; // Evita loops em serializações.
+})
+.AddNewtonsoftJson(); // Suporte opcional ao Newtonsoft.Json.
 
-// Habilita documentação Swagger
+// Documentação da API (Swagger/OpenAPI)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Conexão e configuração do EF Core com MySQL
+// Configuração do Entity Framework Core com MySQL
 string? mysqlConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(mysqlConnectionString, ServerVersion.AutoDetect(mysqlConnectionString))
 );
 
-// Filtro de logging para monitorar chamadas de API
-builder.Services.AddScoped<ApiLogginFilter>();
+var secretKey = builder.Configuration["JWT:SecretKey"]
+    ?? throw new InvalidOperationException("chave invalida");
 
-// Adiciona um logger customizado com nível mínimo de "Information"
-builder.Logging.AddProvider(new CustomLoggerProvider(new CustomLoggerProviderConfiguration
+builder.Services.AddAuthentication(Options =>
 {
-    LogLevel = LogLevel.Information
-}));
+    Options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    Options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
+{
+    options.SaveToken = true; // Salva o token no contexto da requisição.
+    options.RequireHttpsMetadata = true; // Exige HTTPS para segurança.
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true, // Valida o emissor do token.
+        ValidateAudience = true, // Valida o público do token.
+        ValidateLifetime = true, // Valida o tempo de vida do token.
+        ValidateIssuerSigningKey = true, // Valida a chave de assinatura do token.
+        ClockSkew = TimeSpan.Zero, // Não permite tolerância de tempo para expiração.
+        ValidIssuer = builder.Configuration["JWT:ValidIssuer"], // Emissor do token, definido na configuração.
+        ValidAudience = builder.Configuration["JWT:ValidAudience"], // Público do token, definido na configuração.
+        IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(secretKey)) // Chave de assinatura simétrica.
+    };
+});
 
-//Cofigura as dependencias do repositorio
+// Configuração do ASP.NET Core Identity (Autenticação e Autorização)
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
+
+// Registros de Repositórios e Unidade de Trabalho
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUnitOfWork, UniOfWork>();
 
-// Configura a dependencia do service
+// Registros de Serviços da Aplicação
 builder.Services.AddScoped<CategoriaServices>();
 builder.Services.AddScoped<ProdutoServices>();
 
-//Configura do DTO
-builder.Services.AddAutoMapper(cfg =>
-{
-    cfg.AddProfile(new ProdutoMapper());
-});
-// Substitua a linha problemática com a seguinte abordagem explícita para resolver a ambiguidade:
-builder.Services.AddAutoMapper(typeof(ProdutoMapper));
+// Configuração do AutoMapper (Mapeamento de Objetos)
+builder.Services.AddAutoMapper(typeof(ProdutoMapper)); // Registra perfis do assembly de ProdutoMapper.
 
+// Logging e Filtros Customizados
+builder.Services.AddScoped<ApiLogginFilter>(); // Filtro para logging de requisições.
+builder.Logging.AddProvider(new CustomLoggerProvider(new CustomLoggerProviderConfiguration
+{
+    LogLevel = LogLevel.Information // Nível de log para o provedor customizado.
+}));
+
+// =================================================================================================
+// CONSTRUÇÃO DA APLICAÇÃO (APP)
+// =================================================================================================
 var app = builder.Build();
 
-// Configurações para ambiente de desenvolvimento
+// --- 2. Configuração do Pipeline de Requisições HTTP (Middleware) -----------------------------
+
+// Middlewares para ambiente de Desenvolvimento
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.ConfigureApiExceptionHandle(); // Tratamento detalhado de erros
+    app.ConfigureApiExceptionHandle();
+}
+else
+{
+    // Configurar tratamento de erro para produção
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+app.UseHttpsRedirection(); // Força HTTPS.
+
+// Middlewares de Autenticação e Autorização
+// A ordem é importante: UseAuthentication antes de UseAuthorization.
+app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();
+
+app.MapControllers(); // Mapeia as rotas para os controllers.
+
+// =================================================================================================
+// EXECUÇÃO DA APLICAÇÃO
+// =================================================================================================
 app.Run();

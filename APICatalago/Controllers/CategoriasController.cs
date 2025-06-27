@@ -4,6 +4,7 @@ using APICatalago.Filters;
 using APICatalago.Models;
 using APICatalago.Pagination;
 using APICatalago.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using X.PagedList;
@@ -42,6 +43,7 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize]
     [ServiceFilter(typeof(ApiLogginFilter))]
     public async Task<ActionResult<IEnumerable<CategoriaDTO>>> Get()
     {
